@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DSi Sound/Video Converter</title>
+<title>DSi Sound Converter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -321,6 +321,25 @@
   }
   .footnote b { color: var(--paper); }
 
+  .yt-note {
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--paper-dim);
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+  .yt-note a {
+    color: var(--amber);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--amber-dim);
+  }
+  .yt-note a:hover {
+    color: #ffa262;
+    border-bottom-color: #ffa262;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .meters .bar { transition: none; }
   }
@@ -409,6 +428,10 @@
   <div class="footnote" id="footnote">
     <b>How it works:</b> conversion runs entirely in your browser using a WebAssembly build of FFmpeg — your audio is never uploaded to a server. First conversion loads the encoder engine (~30&nbsp;MB) from a CDN, so it may take a few seconds to start.<br><br>
     <b>Note on "16&nbsp;bit":</b> AAC is a compressed format and doesn't store fixed-depth PCM samples the way WAV does, so there's no literal "16-bit AAC." This tool instead treats the sample rate (16000&nbsp;Hz, editable) and channel count (mono by default — click "MONO" in the readout to switch to stereo) as the two settings you named, and exposes AAC's actual quality control — bitrate — as a separate field, defaulted to 16&nbsp;kbps to match what you asked for. Raise it if 16&nbsp;kbps sounds too compressed for your source material.
+  </div>
+
+  <div class="yt-note">
+    If you are trying to convert a YouTube video, use <a href="https://cnvmp3.com/v55" target="_blank" rel="noopener noreferrer">cnvMP3</a>.
   </div>
 
 </div>

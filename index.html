@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DSi Sound Converter</title>
+<title>DSi Sound/Video Converter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -62,6 +62,13 @@
     line-height: 1;
   }
   .unit-name span { color: var(--amber); }
+  #modeWord {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.1s ease;
+  }
+  #modeWord:hover { color: #ffa262; }
+  #modeWord:active { opacity: 0.8; }
   .unit-sub {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10.5px;
@@ -325,10 +332,10 @@
 
   <div class="unit-header">
     <div>
-      <div class="unit-name">DSi<span> Sound</span> Converter</div>
-      <div class="unit-sub">Max spec for Nintendo DSi Sound</div>
+      <div class="unit-name">DSi<span class="toggle" id="modeWord" title="Click to switch mode"> Sound</span> Converter</div>
+      <div class="unit-sub" id="modeSub">Max spec for Nintendo DSi Sound</div>
     </div>
-    <div class="model-tag">
+    <div class="model-tag" id="modelTag">
       ENCODER <b>AAC-LC</b><br>
       RUNS <b>LOCALLY IN BROWSER</b>
     </div>
@@ -337,21 +344,21 @@
   <div class="console">
 
     <!-- Target spec LCD -->
-    <div class="lcd">
+    <div class="lcd" id="lcd">
       <div class="lcd-cell">
-        <div class="lcd-label">Channels</div>
+        <div class="lcd-label" id="lcdLabel1">Channels</div>
         <div class="lcd-value toggle" id="channelsValue" title="Click to toggle mono/stereo">MONO</div>
       </div>
       <div class="lcd-cell">
-        <div class="lcd-label">Sample Rate</div>
-        <div class="lcd-value editable">
+        <div class="lcd-label" id="lcdLabel2">Sample Rate</div>
+        <div class="lcd-value editable" id="lcdCell2">
           <input type="number" id="sampleRateInput" value="16000" step="1000" min="8000" max="48000" />
           <span style="font-size:11px;">Hz</span>
         </div>
       </div>
       <div class="lcd-cell">
-        <div class="lcd-label">Format</div>
-        <div class="lcd-value">AAC</div>
+        <div class="lcd-label" id="lcdLabel3">Format</div>
+        <div class="lcd-value" id="lcdCell3">AAC</div>
       </div>
     </div>
 
@@ -364,8 +371,8 @@
           <path d="M7 8l5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <div class="deck-title">DROP AUDIO FILE OR CLICK TO BROWSE</div>
-        <div class="deck-sub">MP3 · WAV · M4A · FLAC · OGG · ANY FORMAT FFMPEG READS</div>
+        <div class="deck-title" id="deckTitle">DROP AUDIO FILE OR CLICK TO BROWSE</div>
+        <div class="deck-sub" id="deckSub">MP3 · WAV · M4A · FLAC · OGG · ANY FORMAT FFMPEG READS</div>
       </div>
     </div>
 
@@ -375,9 +382,19 @@
 
     <!-- Controls -->
     <div class="controls">
-      <div class="rate-field">
+      <div class="rate-field" id="audioBitrateField">
         BITRATE
         <input type="number" id="bitrateInput" value="16" min="8" max="320" step="8" />
+        kbps
+      </div>
+      <div class="rate-field" id="videoBitrateField" style="display:none;">
+        VIDEO
+        <input type="number" id="videoBitrateInput" value="200" min="50" max="2000" step="50" />
+        kbps
+      </div>
+      <div class="rate-field" id="videoAudioBitrateField" style="display:none;">
+        AUDIO
+        <input type="number" id="videoAudioBitrateInput" value="64" min="16" max="320" step="8" />
         kbps
       </div>
       <button class="btn" id="convertBtn" disabled>Convert</button>
@@ -389,7 +406,7 @@
 
   </div>
 
-  <div class="footnote">
+  <div class="footnote" id="footnote">
     <b>How it works:</b> conversion runs entirely in your browser using a WebAssembly build of FFmpeg — your audio is never uploaded to a server. First conversion loads the encoder engine (~30&nbsp;MB) from a CDN, so it may take a few seconds to start.<br><br>
     <b>Note on "16&nbsp;bit":</b> AAC is a compressed format and doesn't store fixed-depth PCM samples the way WAV does, so there's no literal "16-bit AAC." This tool instead treats the sample rate (16000&nbsp;Hz, editable) and channel count (mono by default — click "MONO" in the readout to switch to stereo) as the two settings you named, and exposes AAC's actual quality control — bitrate — as a separate field, defaulted to 16&nbsp;kbps to match what you asked for. Raise it if 16&nbsp;kbps sounds too compressed for your source material.
   </div>
@@ -412,9 +429,99 @@
   const bitrateInput = document.getElementById('bitrateInput');
   const channelsValue = document.getElementById('channelsValue');
 
+  const modeWord = document.getElementById('modeWord');
+  const modeSub = document.getElementById('modeSub');
+  const lcdLabel1 = document.getElementById('lcdLabel1');
+  const lcdLabel2 = document.getElementById('lcdLabel2');
+  const lcdLabel3 = document.getElementById('lcdLabel3');
+  const lcdCell2 = document.getElementById('lcdCell2');
+  const lcdCell3 = document.getElementById('lcdCell3');
+  const deckTitle = document.getElementById('deckTitle');
+  const deckSub = document.getElementById('deckSub');
+  const audioBitrateField = document.getElementById('audioBitrateField');
+  const videoBitrateField = document.getElementById('videoBitrateField');
+  const videoAudioBitrateField = document.getElementById('videoAudioBitrateField');
+  const videoBitrateInput = document.getElementById('videoBitrateInput');
+  const videoAudioBitrateInput = document.getElementById('videoAudioBitrateInput');
+  const footnote = document.getElementById('footnote');
+
+  let mode = 'audio'; // 'audio' | 'video'
+
+  const AUDIO_FOOTNOTE = `
+    <b>How it works:</b> conversion runs entirely in your browser using a WebAssembly build of FFmpeg — your audio is never uploaded to a server. First conversion loads the encoder engine (~30&nbsp;MB) from a CDN, so it may take a few seconds to start.<br><br>
+    <b>Note on "16&nbsp;bit":</b> AAC is a compressed format and doesn't store fixed-depth PCM samples the way WAV does, so there's no literal "16-bit AAC." This tool instead treats the sample rate (16000&nbsp;Hz, editable) and channel count (mono by default — click "MONO" in the readout to switch to stereo) as the two settings you named, and exposes AAC's actual quality control — bitrate — as a separate field, defaulted to 16&nbsp;kbps to match what you asked for. Raise it if 16&nbsp;kbps sounds too compressed for your source material.
+  `;
+  const VIDEO_FOOTNOTE = `
+    <b>How it works:</b> conversion runs entirely in your browser using a WebAssembly build of FFmpeg — your video is never uploaded to a server. First conversion loads the encoder engine (~30&nbsp;MB) from a CDN, so it may take a few seconds to start.<br><br>
+    <b>Spec:</b> matches the Nintendo DSi's video playback limits — MPEG-4 (XviD) video at 256×192, 12&nbsp;fps, editable bitrates for video and audio, MP3 audio at 32000&nbsp;Hz mono, packaged as an AVI file.
+  `;
+
+  function setMode(newMode) {
+    mode = newMode;
+    if (mode === 'audio') {
+      modeWord.textContent = ' Sound';
+      modeSub.textContent = 'Max spec for Nintendo DSi Sound';
+      document.title = 'DSi Sound Converter';
+      lcdLabel1.textContent = 'Channels';
+      channelsValue.style.display = '';
+      channelsValue.classList.add('toggle');
+      channelsValue.title = 'Click to toggle mono/stereo';
+      channelsValue.textContent = channelCount === 1 ? 'MONO' : 'STEREO';
+      lcdLabel2.textContent = 'Sample Rate';
+      lcdCell2.innerHTML = `<input type="number" id="sampleRateInput" value="16000" step="1000" min="8000" max="48000" /><span style="font-size:11px;">Hz</span>`;
+      lcdLabel3.textContent = 'Format';
+      lcdCell3.textContent = 'AAC';
+      fileInput.accept = 'audio/*';
+      audioBitrateField.style.display = '';
+      videoBitrateField.style.display = 'none';
+      videoAudioBitrateField.style.display = 'none';
+      footnote.innerHTML = AUDIO_FOOTNOTE;
+    } else {
+      modeWord.textContent = ' Video';
+      modeSub.textContent = 'Max spec for Nintendo DSi Video';
+      document.title = 'DSi Video Converter';
+      lcdLabel1.textContent = 'Format';
+      channelsValue.style.display = '';
+      channelsValue.classList.remove('toggle');
+      channelsValue.title = '';
+      channelsValue.textContent = 'XVID';
+      lcdLabel2.textContent = 'Resolution';
+      lcdCell2.innerHTML = `256×192`;
+      lcdLabel3.textContent = 'Frame Rate';
+      lcdCell3.textContent = '12 FPS';
+      fileInput.accept = 'video/*';
+      audioBitrateField.style.display = 'none';
+      videoBitrateField.style.display = '';
+      videoAudioBitrateField.style.display = '';
+      footnote.innerHTML = VIDEO_FOOTNOTE;
+    }
+    // clear any selected file/output when switching modes, spec has changed
+    selectedFile = null;
+    outputBlob = null;
+    downloadRow.style.display = 'none';
+    deck.classList.remove('has-file');
+    deckContent.innerHTML = `
+      <svg class="deck-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="M12 3v12" stroke-linecap="round"/>
+        <path d="M7 8l5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="deck-title" id="deckTitle">${mode === 'audio' ? 'DROP AUDIO FILE OR CLICK TO BROWSE' : 'DROP VIDEO FILE OR CLICK TO BROWSE'}</div>
+      <div class="deck-sub" id="deckSub">${mode === 'audio' ? 'MP3 · WAV · M4A · FLAC · OGG · ANY FORMAT FFMPEG READS' : 'MP4 · MOV · MKV · AVI · ANY FORMAT FFMPEG READS'}</div>
+    `;
+    convertBtn.disabled = true;
+    setStatus('STANDBY');
+  }
+
+  modeWord.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setMode(mode === 'audio' ? 'video' : 'audio');
+  });
+
   let channelCount = 1; // 1 = mono, 2 = stereo
 
   channelsValue.addEventListener('click', () => {
+    if (mode !== 'audio') return;
     channelCount = channelCount === 1 ? 2 : 1;
     channelsValue.textContent = channelCount === 1 ? 'MONO' : 'STEREO';
   });
@@ -540,9 +647,6 @@
   convertBtn.addEventListener('click', async () => {
     if (!selectedFile) return;
 
-    const sampleRate = parseInt(sampleRateInput.value, 10) || 16000;
-    const bitrate = parseInt(bitrateInput.value, 10) || 16;
-
     convertBtn.disabled = true;
     downloadRow.style.display = 'none';
     setStatus('LOADING ENCODER ENGINE…');
@@ -553,28 +657,55 @@
       setStatus('CONVERTING…');
 
       const inputName = 'input' + (selectedFile.name.match(/\.[a-zA-Z0-9]+$/)?.[0] || '.dat');
-      const outputName = 'output.aac';
-
       await engine.writeFile(inputName, await fetchFile(selectedFile));
 
-      await engine.exec([
-        '-i', inputName,
-        '-ac', String(channelCount),
-        '-ar', String(sampleRate),
-        '-c:a', 'aac',
-        '-b:a', `${bitrate}k`,
-        '-f', 'adts',
-        outputName
-      ]);
+      if (mode === 'audio') {
+        const sampleRate = parseInt(document.getElementById('sampleRateInput').value, 10) || 16000;
+        const bitrate = parseInt(bitrateInput.value, 10) || 16;
+        const outputName = 'output.aac';
 
-      const data = await engine.readFile(outputName);
-      outputBlob = new Blob([data.buffer], { type: 'audio/aac' });
+        await engine.exec([
+          '-i', inputName,
+          '-ac', String(channelCount),
+          '-ar', String(sampleRate),
+          '-c:a', 'aac',
+          '-b:a', `${bitrate}k`,
+          '-f', 'adts',
+          outputName
+        ]);
+
+        const data = await engine.readFile(outputName);
+        outputBlob = new Blob([data.buffer], { type: 'audio/aac' });
+        await engine.deleteFile(outputName);
+      } else {
+        const videoBitrate = parseInt(videoBitrateInput.value, 10) || 200;
+        const audioBitrate = parseInt(videoAudioBitrateInput.value, 10) || 64;
+        const outputName = 'output.avi';
+
+        await engine.exec([
+          '-i', inputName,
+          '-c:v', 'mpeg4',
+          '-vtag', 'XVID',
+          '-s', '256x192',
+          '-r', '12',
+          '-b:v', `${videoBitrate}k`,
+          '-c:a', 'libmp3lame',
+          '-ar', '32000',
+          '-ac', '1',
+          '-b:a', `${audioBitrate}k`,
+          outputName
+        ]);
+
+        const data = await engine.readFile(outputName);
+        outputBlob = new Blob([data.buffer], { type: 'video/avi' });
+        await engine.deleteFile(outputName);
+      }
 
       await engine.deleteFile(inputName);
-      await engine.deleteFile(outputName);
 
       stopMeters(true);
       setStatus(`DONE — ${formatBytes(outputBlob.size)} OUTPUT`, 'ok');
+      downloadBtn.textContent = mode === 'audio' ? 'Download .aac' : 'Download .avi';
       downloadRow.style.display = 'block';
     } catch (err) {
       console.error(err);
@@ -588,10 +719,14 @@
   downloadBtn.addEventListener('click', () => {
     if (!outputBlob || !selectedFile) return;
     const baseName = selectedFile.name.replace(/\.[^/.]+$/, '');
-    const channelLabel = channelCount === 1 ? 'mono' : 'stereo';
     const a = document.createElement('a');
     a.href = URL.createObjectURL(outputBlob);
-    a.download = `${baseName}_${channelLabel}.aac`;
+    if (mode === 'audio') {
+      const channelLabel = channelCount === 1 ? 'mono' : 'stereo';
+      a.download = `${baseName}_${channelLabel}.aac`;
+    } else {
+      a.download = `${baseName}_dsi.avi`;
+    }
     document.body.appendChild(a);
     a.click();
     a.remove();

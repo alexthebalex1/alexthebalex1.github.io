@@ -41,6 +41,7 @@ samples the way an uncompressed WAV file does, so there's no literal
 
 ## Files
 
-- `index.html` — everything (markup, styles, and the conversion logic) in
-  one file, so it's easy to drop on any static host (GitHub Pages, Netlify,
-  S3, etc.)
+- `index.html` — markup, styles, and the conversion logic
+- `worker-proxy.js` — a tiny same-origin file ffmpeg.wasm needs to spin up
+  its internal worker correctly; **must be deployed in the same folder as
+  `index.html`** (e.g. both files at the root of your GitHub Pages repo)

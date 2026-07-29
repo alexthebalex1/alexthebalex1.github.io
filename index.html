@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSi Sound Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #121110;
+    --panel: #191816;
+    --panel-raised: #201f1c;
+    --line: #34322d;
+    --lcd-bg: #0c1410;
+    --lcd-fg: #8fd14f;
+    --lcd-fg-dim: #3f5c33;
+    --amber: #ff8a3d;
+    --amber-dim: #6b4626;
+    --paper: #ece7dc;
+    --paper-dim: #9c968a;
+    --red-led: #ff5a4e;
+    --radius: 3px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,138,61,0.07), transparent),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    color: var(--paper);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 56px 20px 80px;
+  }
+
+  /* ---------- Header / unit label ---------- */
+  .unit-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .unit-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+    color: var(--paper);
+    line-height: 1;
+  }
+  .unit-name span { color: var(--amber); }
+  .unit-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--paper-dim);
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .model-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--paper-dim);
+    text-align: right;
+    line-height: 1.6;
+  }
+  .model-tag b { color: var(--paper); }
+
+  /* ---------- Console panel ---------- */
+  .console {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 22px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 20px 40px -20px rgba(0,0,0,0.6);
+  }
+
+  /* LCD readout showing target spec */
+  .lcd {
+    background: var(--lcd-bg);
+    border: 1px solid #05100a;
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+  .lcd-cell { text-align: center; padding: 4px 2px; }
+  .lcd-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: var(--lcd-fg-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .lcd-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--lcd-fg);
+    text-shadow: 0 0 8px rgba(143,209,79,0.45);
+    letter-spacing: 0.02em;
+  }
+  .lcd-value.editable {
+    cursor: text;
+  }
+  .lcd-value input {
+    width: 46px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--lcd-fg-dim);
+    color: var(--lcd-fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 17px;
+    font-weight: 700;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(143,209,79,0.45);
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .lcd-value input::-webkit-outer-spin-button,
+  .lcd-value input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .lcd-value input:focus { border-bottom-color: var(--lcd-fg); }
+
+  /* Drop zone */
+  .deck {
+    position: relative;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    background: var(--panel-raised);
+    padding: 30px 18px;
+    text-align: center;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    cursor: pointer;
+  }
+  .deck.drag-over { border-color: var(--amber); background: #241f18; }
+  .deck.has-file { border-style: solid; border-color: var(--line); }
+  .deck input[type=file] { display: none; }
+
+  .deck-icon {
+    width: 34px; height: 34px;
+    margin: 0 auto 12px;
+    color: var(--paper-dim);
+  }
+  .deck-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.05em;
+    color: var(--paper);
+  }
+  .deck-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--paper-dim);
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+  }
+  .file-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--lcd-fg);
+    box-shadow: 0 0 6px var(--lcd-fg);
+    flex-shrink: 0;
+  }
+  .file-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--paper);
+    max-width: 380px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--paper-dim);
+    margin-top: 8px;
+  }
+
+  /* Meter bank */
+  .meters {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 34px;
+    margin: 18px 0 6px;
+    padding: 0 2px;
+  }
+  .meters .bar {
+    flex: 1;
+    background: var(--lcd-fg-dim);
+    border-radius: 1px;
+    height: 12%;
+    transition: height 0.12s ease, background 0.12s ease;
+  }
+  .meters.active .bar { background: var(--lcd-fg); }
+  .meters.idle .bar { height: 6% !important; background: var(--line) !important; }
+
+  .status-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--paper-dim);
+    letter-spacing: 0.05em;
+    min-height: 14px;
+    text-align: center;
+  }
+  .status-line.err { color: var(--red-led); }
+  .status-line.ok { color: var(--lcd-fg); }
+
+  /* Controls row */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .rate-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--paper-dim);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .rate-field input {
+    width: 52px;
+    background: var(--lcd-bg);
+    border: 1px solid #05100a;
+    border-radius: 2px;
+    color: var(--lcd-fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 5px 6px;
+    text-align: right;
+  }
+
+  .btn {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 13px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--amber);
+    background: var(--amber);
+    color: #1a1200;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, opacity 0.15s ease;
+  }
+  .btn:hover:not(:disabled) { background: #ffa262; }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: transparent;
+    color: var(--paper-dim);
+    border-color: var(--line);
+  }
+
+  .btn.download {
+    background: var(--lcd-fg);
+    border-color: var(--lcd-fg);
+    color: #0c1a06;
+  }
+  .btn.download:hover:not(:disabled) { background: #a3e065; }
+
+  /* Footer note */
+  .footnote {
+    margin-top: 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.7;
+    color: var(--paper-dim);
+    letter-spacing: 0.02em;
+  }
+  .footnote b { color: var(--paper); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .meters .bar { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="unit-header">
+    <div>
+      <div class="unit-name">DSi<span> Sound</span> Converter</div>
+      <div class="unit-sub">Max spec for Nintendo DSi Sound</div>
+    </div>
+    <div class="model-tag">
+      ENCODER <b>AAC-LC</b><br>
+      RUNS <b>LOCALLY IN BROWSER</b>
+    </div>
+  </div>
+
+  <div class="console">
+
+    <!-- Target spec LCD -->
+    <div class="lcd">
+      <div class="lcd-cell">
+        <div class="lcd-label">Channels</div>
+        <div class="lcd-value">MONO</div>
+      </div>
+      <div class="lcd-cell">
+        <div class="lcd-label">Sample Rate</div>
+        <div class="lcd-value editable">
+          <input type="number" id="sampleRateInput" value="16000" step="1000" min="8000" max="48000" />
+          <span style="font-size:11px;">Hz</span>
+        </div>
+      </div>
+      <div class="lcd-cell">
+        <div class="lcd-label">Format</div>
+        <div class="lcd-value">AAC</div>
+      </div>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="deck" id="deck">
+      <input type="file" id="fileInput" accept="audio/*" />
+      <div id="deckContent">
+        <svg class="deck-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M12 3v12" stroke-linecap="round"/>
+          <path d="M7 8l5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="deck-title">DROP AUDIO FILE OR CLICK TO BROWSE</div>
+        <div class="deck-sub">MP3 · WAV · M4A · FLAC · OGG · ANY FORMAT FFMPEG READS</div>
+      </div>
+    </div>
+
+    <!-- Meter bank -->
+    <div class="meters idle" id="meters"></div>
+    <div class="status-line" id="status">STANDBY</div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="rate-field">
+        BITRATE
+        <input type="number" id="bitrateInput" value="16" min="8" max="320" step="8" />
+        kbps
+      </div>
+      <button class="btn" id="convertBtn" disabled>Convert</button>
+    </div>
+
+    <div id="downloadRow" style="display:none; margin-top:10px;">
+      <button class="btn download" id="downloadBtn">Download .aac</button>
+    </div>
+
+  </div>
+
+  <div class="footnote">
+    <b>How it works:</b> conversion runs entirely in your browser using a WebAssembly build of FFmpeg — your audio is never uploaded to a server. First conversion loads the encoder engine (~30&nbsp;MB) from a CDN, so it may take a few seconds to start.<br><br>
+    <b>Note on "16&nbsp;bit":</b> AAC is a compressed format and doesn't store fixed-depth PCM samples the way WAV does, so there's no literal "16-bit AAC." This tool instead treats the sample rate (16000&nbsp;Hz) and channel count (mono) as the two settings you named, and exposes AAC's actual quality control — bitrate — as a separate field, defaulted to 16&nbsp;kbps to match what you asked for. Raise it if 16&nbsp;kbps sounds too compressed for your source material.
+  </div>
+
+</div>
+
+<script type="module">
+  import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+  import { fetchFile, toBlobURL } from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js";
+
+  const deck = document.getElementById('deck');
+  const deckContent = document.getElementById('deckContent');
+  const fileInput = document.getElementById('fileInput');
+  const convertBtn = document.getElementById('convertBtn');
+  const downloadRow = document.getElementById('downloadRow');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const statusEl = document.getElementById('status');
+  const metersEl = document.getElementById('meters');
+  const sampleRateInput = document.getElementById('sampleRateInput');
+  const bitrateInput = document.getElementById('bitrateInput');
+
+  const BAR_COUNT = 28;
+  for (let i = 0; i < BAR_COUNT; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    metersEl.appendChild(bar);
+  }
+  const bars = [...metersEl.querySelectorAll('.bar')];
+
+  let selectedFile = null;
+  let outputBlob = null;
+  let ffmpeg = null;
+  let ffmpegLoading = null;
+  let meterTimer = null;
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text;
+    statusEl.className = 'status-line' + (cls ? ' ' + cls : '');
+  }
+
+  function startMeters() {
+    metersEl.classList.remove('idle');
+    metersEl.classList.add('active');
+    meterTimer = setInterval(() => {
+      bars.forEach(b => {
+        const h = 8 + Math.random() * 92;
+        b.style.height = h + '%';
+      });
+    }, 90);
+  }
+
+  function stopMeters(collapse) {
+    clearInterval(meterTimer);
+    metersEl.classList.remove('active');
+    if (collapse) {
+      metersEl.classList.add('idle');
+    } else {
+      bars.forEach(b => b.style.height = '6%');
+    }
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function selectFile(file) {
+    selectedFile = file;
+    outputBlob = null;
+    downloadRow.style.display = 'none';
+    deck.classList.add('has-file');
+    deckContent.innerHTML = `
+      <div class="file-row">
+        <div class="file-led"></div>
+        <div class="file-name">${file.name}</div>
+      </div>
+      <div class="file-meta">${formatBytes(file.size)} · CLICK TO REPLACE</div>
+    `;
+    convertBtn.disabled = false;
+    setStatus('READY — PRESS CONVERT');
+  }
+
+  deck.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) selectFile(e.target.files[0]);
+  });
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    deck.addEventListener(evt, (e) => {
+      e.preventDefault();
+      deck.classList.add('drag-over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    deck.addEventListener(evt, (e) => {
+      e.preventDefault();
+      deck.classList.remove('drag-over');
+    });
+  });
+  deck.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) selectFile(file);
+  });
+
+  async function ensureFFmpeg() {
+    if (ffmpeg) return ffmpeg;
+    if (ffmpegLoading) return ffmpegLoading;
+
+    ffmpegLoading = (async () => {
+      setStatus('LOADING ENCODER ENGINE…');
+      startMeters();
+      const instance = new FFmpeg();
+      instance.on('log', ({ message }) => {
+        // surfaced only for debugging; keep status line calmer for users
+        console.log(message);
+      });
+      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+      await instance.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+      ffmpeg = instance;
+      return instance;
+    })();
+
+    return ffmpegLoading;
+  }
+
+  convertBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    const sampleRate = parseInt(sampleRateInput.value, 10) || 16000;
+    const bitrate = parseInt(bitrateInput.value, 10) || 16;
+
+    convertBtn.disabled = true;
+    downloadRow.style.display = 'none';
+    setStatus('LOADING ENCODER ENGINE…');
+    startMeters();
+
+    try {
+      const engine = await ensureFFmpeg();
+      setStatus('CONVERTING…');
+
+      const inputName = 'input' + (selectedFile.name.match(/\.[a-zA-Z0-9]+$/)?.[0] || '.dat');
+      const outputName = 'output.aac';
+
+      await engine.writeFile(inputName, await fetchFile(selectedFile));
+
+      await engine.exec([
+        '-i', inputName,
+        '-ac', '1',
+        '-ar', String(sampleRate),
+        '-c:a', 'aac',
+        '-b:a', `${bitrate}k`,
+        '-f', 'adts',
+        outputName
+      ]);
+
+      const data = await engine.readFile(outputName);
+      outputBlob = new Blob([data.buffer], { type: 'audio/aac' });
+
+      await engine.deleteFile(inputName);
+      await engine.deleteFile(outputName);
+
+      stopMeters(true);
+      setStatus(`DONE — ${formatBytes(outputBlob.size)} OUTPUT`, 'ok');
+      downloadRow.style.display = 'block';
+    } catch (err) {
+      console.error(err);
+      stopMeters(true);
+      setStatus('CONVERSION FAILED — SEE CONSOLE', 'err');
+    } finally {
+      convertBtn.disabled = false;
+    }
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    if (!outputBlob || !selectedFile) return;
+    const baseName = selectedFile.name.replace(/\.[^/.]+$/, '');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(outputBlob);
+    a.download = `${baseName}_mono16k.aac`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+</script>
+
+</body>
+</html>

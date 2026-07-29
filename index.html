@@ -120,6 +120,17 @@
   .lcd-value.editable {
     cursor: text;
   }
+  .lcd-value.toggle {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.1s ease, text-shadow 0.1s ease;
+  }
+  .lcd-value.toggle:hover {
+    color: #b6e88a;
+  }
+  .lcd-value.toggle:active {
+    transform: translateY(1px);
+  }
   .lcd-value input {
     width: 46px;
     background: transparent;
@@ -329,7 +340,7 @@
     <div class="lcd">
       <div class="lcd-cell">
         <div class="lcd-label">Channels</div>
-        <div class="lcd-value">MONO</div>
+        <div class="lcd-value toggle" id="channelsValue" title="Click to toggle mono/stereo">MONO</div>
       </div>
       <div class="lcd-cell">
         <div class="lcd-label">Sample Rate</div>
@@ -380,7 +391,7 @@
 
   <div class="footnote">
     <b>How it works:</b> conversion runs entirely in your browser using a WebAssembly build of FFmpeg — your audio is never uploaded to a server. First conversion loads the encoder engine (~30&nbsp;MB) from a CDN, so it may take a few seconds to start.<br><br>
-    <b>Note on "16&nbsp;bit":</b> AAC is a compressed format and doesn't store fixed-depth PCM samples the way WAV does, so there's no literal "16-bit AAC." This tool instead treats the sample rate (16000&nbsp;Hz) and channel count (mono) as the two settings you named, and exposes AAC's actual quality control — bitrate — as a separate field, defaulted to 16&nbsp;kbps to match what you asked for. Raise it if 16&nbsp;kbps sounds too compressed for your source material.
+    <b>Note on "16&nbsp;bit":</b> AAC is a compressed format and doesn't store fixed-depth PCM samples the way WAV does, so there's no literal "16-bit AAC." This tool instead treats the sample rate (16000&nbsp;Hz, editable) and channel count (mono by default — click "MONO" in the readout to switch to stereo) as the two settings you named, and exposes AAC's actual quality control — bitrate — as a separate field, defaulted to 16&nbsp;kbps to match what you asked for. Raise it if 16&nbsp;kbps sounds too compressed for your source material.
   </div>
 
 </div>
@@ -399,6 +410,14 @@
   const metersEl = document.getElementById('meters');
   const sampleRateInput = document.getElementById('sampleRateInput');
   const bitrateInput = document.getElementById('bitrateInput');
+  const channelsValue = document.getElementById('channelsValue');
+
+  let channelCount = 1; // 1 = mono, 2 = stereo
+
+  channelsValue.addEventListener('click', () => {
+    channelCount = channelCount === 1 ? 2 : 1;
+    channelsValue.textContent = channelCount === 1 ? 'MONO' : 'STEREO';
+  });
 
   const BAR_COUNT = 28;
   for (let i = 0; i < BAR_COUNT; i++) {
@@ -540,7 +559,7 @@
 
       await engine.exec([
         '-i', inputName,
-        '-ac', '1',
+        '-ac', String(channelCount),
         '-ar', String(sampleRate),
         '-c:a', 'aac',
         '-b:a', `${bitrate}k`,
@@ -569,9 +588,10 @@
   downloadBtn.addEventListener('click', () => {
     if (!outputBlob || !selectedFile) return;
     const baseName = selectedFile.name.replace(/\.[^/.]+$/, '');
+    const channelLabel = channelCount === 1 ? 'mono' : 'stereo';
     const a = document.createElement('a');
     a.href = URL.createObjectURL(outputBlob);
-    a.download = `${baseName}_mono16k.aac`;
+    a.download = `${baseName}_${channelLabel}.aac`;
     document.body.appendChild(a);
     a.click();
     a.remove();

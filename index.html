@@ -377,7 +377,7 @@
       </div>
       <div class="lcd-cell">
         <div class="lcd-label" id="lcdLabel3">Format</div>
-        <div class="lcd-value" id="lcdCell3">AAC</div>
+        <div class="lcd-value" id="lcdCell3">M4A</div>
       </div>
     </div>
 
@@ -420,7 +420,7 @@
     </div>
 
     <div id="downloadRow" style="display:none; margin-top:10px;">
-      <button class="btn download" id="downloadBtn">Download .aac</button>
+      <button class="btn download" id="downloadBtn">Download .m4a</button>
     </div>
 
   </div>
@@ -493,7 +493,7 @@
       lcdLabel2.textContent = 'Sample Rate';
       lcdCell2.innerHTML = `<input type="number" id="sampleRateInput" value="16000" step="1000" min="8000" max="48000" /><span style="font-size:11px;">Hz</span>`;
       lcdLabel3.textContent = 'Format';
-      lcdCell3.textContent = 'AAC';
+      lcdCell3.textContent = 'M4A';
       fileInput.accept = 'audio/*';
       audioBitrateField.style.display = '';
       videoBitrateField.style.display = 'none';
@@ -685,7 +685,7 @@
       if (mode === 'audio') {
         const sampleRate = parseInt(document.getElementById('sampleRateInput').value, 10) || 16000;
         const bitrate = parseInt(bitrateInput.value, 10) || 16;
-        const outputName = 'output.aac';
+        const outputName = 'output.m4a';
 
         await engine.exec([
           '-i', inputName,
@@ -693,12 +693,12 @@
           '-ar', String(sampleRate),
           '-c:a', 'aac',
           '-b:a', `${bitrate}k`,
-          '-f', 'adts',
+          '-movflags', '+faststart',
           outputName
-        ]);
+      ]);
 
         const data = await engine.readFile(outputName);
-        outputBlob = new Blob([data.buffer], { type: 'audio/aac' });
+        outputBlob = new Blob([data.buffer], { type: 'audio/mp4' });
         await engine.deleteFile(outputName);
       } else {
         const videoBitrate = parseInt(videoBitrateInput.value, 10) || 200;
@@ -728,7 +728,7 @@
 
       stopMeters(true);
       setStatus(`DONE — ${formatBytes(outputBlob.size)} OUTPUT`, 'ok');
-      downloadBtn.textContent = mode === 'audio' ? 'Download .aac' : 'Download .avi';
+      downloadBtn.textContent = mode === 'audio' ? 'Download .m4a' : 'Download .avi';
       downloadRow.style.display = 'block';
     } catch (err) {
       console.error(err);
@@ -746,9 +746,9 @@
     a.href = URL.createObjectURL(outputBlob);
     if (mode === 'audio') {
       const channelLabel = channelCount === 1 ? 'mono' : 'stereo';
-      a.download = `${baseName}_${channelLabel}.aac`;
+      a.download = `${baseName}.m4a`;
     } else {
-      a.download = `${baseName}_dsi.avi`;
+      a.download = `${baseName}.avi`;
     }
     document.body.appendChild(a);
     a.click();

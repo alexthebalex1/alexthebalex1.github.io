@@ -689,14 +689,14 @@
 
         await engine.exec([
           '-i', inputName,
+          '-vn',                  // ignore video & album art
+          '-map', '0:a:0',        // take only the first audio stream
           '-ac', String(channelCount),
           '-ar', String(sampleRate),
           '-c:a', 'aac',
           '-b:a', `${bitrate}k`,
-          '-movflags', '+faststart',
           outputName
       ]);
-
         const data = await engine.readFile(outputName);
         outputBlob = new Blob([data.buffer], { type: 'audio/mp4' });
         await engine.deleteFile(outputName);

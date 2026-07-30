@@ -474,10 +474,11 @@
   const AUDIO_FOOTNOTE = `
     <b>How it works:</b> conversion runs entirely in your browser using a WebAssembly build of FFmpeg — your audio is never uploaded to a server. First conversion loads the encoder engine (~30&nbsp;MB) from a CDN, so it may take a few seconds to start.<br><br>
     <b>Note on "16&nbsp;bit":</b> AAC is a compressed format and doesn't store fixed-depth PCM samples the way WAV does, so there's no literal "16-bit AAC." This tool instead treats the sample rate (16000&nbsp;Hz, editable) and channel count (mono by default — click "MONO" in the readout to switch to stereo) as the two settings you named, and exposes AAC's actual quality control — bitrate — as a separate field, defaulted to 16&nbsp;kbps to match what you asked for. Raise it if 16&nbsp;kbps sounds too compressed for your source material.
-  `;
+    <b>NOTE: I used AI for this, but atleast it works.</b>`;
   const VIDEO_FOOTNOTE = `
     <b>How it works:</b> conversion runs entirely in your browser using a WebAssembly build of FFmpeg — your video is never uploaded to a server. First conversion loads the encoder engine (~30&nbsp;MB) from a CDN, so it may take a few seconds to start.<br><br>
     <b>Spec:</b> matches the Nintendo DSi's video playback limits — MPEG-4 (XviD) video at 256×192, 12&nbsp;fps, editable bitrates for video and audio, MP3 audio at 32000&nbsp;Hz mono, packaged as an AVI file.
+    <b>NOTE: I used AI for this, but atleast it works.</b>
   `;
 
   function setMode(newMode) {
